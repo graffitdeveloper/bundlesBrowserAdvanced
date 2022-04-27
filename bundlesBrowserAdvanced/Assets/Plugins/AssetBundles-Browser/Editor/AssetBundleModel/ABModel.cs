@@ -320,6 +320,11 @@ namespace AssetBundleBrowser.AssetBundleModel
             message += "Display of bundle data and building of bundles will not work.";
             message += "\nDetails: If you name a bundle 'x/y', then the result of your build will be a bundle named 'y' in a folder named 'x'.  You thus cannot also have a bundle named 'x' at the same level as the folder named 'x'.";
             LogError(message);
+            if (EditorUtility.DisplayDialog("AssetBundlesBrowser: conflicting folder and bundle name",
+                    $"AssetBundles database has conflicting name of {name} bundle and bundle folder. It happens sometimes on branch switch. Would you like to remove unused bundle names from database?",
+                    "Yes", "No, let as is")) {
+                AssetDatabase.RemoveUnusedAssetBundleNames();
+            }
         }
 
         private static BundleInfo AddBundleToFolder(BundleFolderInfo root, BundleNameData nameData)
