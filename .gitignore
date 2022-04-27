@@ -1,0 +1,18 @@
+*/Library/
+*/Logs/
+*/Temp/
+*/obj/
+.idea/
+*/.vs/
+*/.log/
+*/Assets/Plugins/Editor/Jetbrains/
+*/ProjectSettings/Packages/com.unity.testtools.codecoverage/
+*/CodeCoverage/
+/builds/
+*.sln
+*.csproj
+*.user
+#python cache files
+*.pyc
+*/Assets/csc.rsp*
+*/Builds/
