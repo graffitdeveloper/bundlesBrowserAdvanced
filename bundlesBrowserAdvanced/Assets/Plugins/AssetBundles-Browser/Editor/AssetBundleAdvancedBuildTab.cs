@@ -508,6 +508,7 @@ namespace AssetBundleBrowser {
 
 			m_UserData.m_OutputPath = oldOutputPath;
 			m_UserData.m_BuildTarget = oldBuildTarget;
+			AssetDatabase.SaveAssets();
 			Debug.Log("<color=#00FFAA>Rebuild bundles for all selected platforms finished!</color>");
 		}
 
