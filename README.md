@@ -6,13 +6,13 @@ This enhance adds brand new tab "Advanced Build".
 Features:
 - Ability to build Asset Bundles on multiples platforms by only one click. This improves your productivity by not having to manually switch the target platform and build bundles for it each time.
 Current supported platforms list: Standalone Windows, Android, iOS, WebGL;
-- Ability to hide platform specific code by 
+- Ability to hide platform specific code in such way:
 ```c#
 #if !BUNDLES_BUILD
 // Platform-specific code here
 #endif
 ```
-directive. It allows you not to get error builds when you rebuild bundles without platform specific lines remove\comment;
+It allows you not to get error builds when you rebuild bundles without platform specific lines remove\comment;
 - Improved speed of Bundle Assets list refresh in "Configure" tab;
 - Ability to build specific Asset Bundle, instead of build all of them, when it's required;
 - Fixed bug when bundle name and bundle folder conflicts, for instance after switch branch. In this case you will see dialog window that offers you to recache Asset Bundles List.
