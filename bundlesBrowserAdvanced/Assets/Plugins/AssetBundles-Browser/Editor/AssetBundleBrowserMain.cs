@@ -63,12 +63,12 @@ namespace AssetBundleBrowser {
 
 		private void OnEnable() {
 			Rect subPos = GetSubWindowArea();
-			if (m_ManageTab == null)
-				m_ManageTab = new AssetBundleManageTab();
-			m_ManageTab.OnEnable(subPos, this);
 			if (_mAdvancedBuildTab == null)
 				_mAdvancedBuildTab = new AssetBundleAdvancedBuildTab();
 			_mAdvancedBuildTab.OnEnable(this);
+			if (m_ManageTab == null)
+				m_ManageTab = new AssetBundleManageTab();
+			m_ManageTab.OnEnable(subPos, this);
 			if (_mBuildTab == null)
 				_mBuildTab = new AssetBundleBuildTab();
 			_mBuildTab.OnEnable(this);

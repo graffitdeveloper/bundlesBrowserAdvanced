@@ -1,5 +1,6 @@
 ﻿using UnityEditor;
 using System;
+using System.Collections.Generic;
 
 namespace AssetBundleBrowser.AssetBundleDataSource
 {
@@ -121,6 +122,6 @@ namespace AssetBundleBrowser.AssetBundleDataSource
         /// Executes data source's implementation of asset bundle building.
         ///   Called by "build" button in build tab of tool.
         /// </summary>
-        bool BuildAssetBundles (ABBuildInfo info);
+        bool BuildAssetBundles(ABBuildInfo info, List<AssetBundleBuild> assetBundleBuilds = null);
     }
 }

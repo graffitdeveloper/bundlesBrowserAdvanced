@@ -238,6 +238,10 @@ namespace AssetBundleBrowser.AssetBundleModel
             return (s_RootLevelBundles.GetChildList().Count() == 0);
         }
 
+        internal static Dictionary<string, BundleInfo>.ValueCollection BundlesList() {
+            return s_RootLevelBundles.GetChildList();
+        }
+
         internal static string GetEmptyMessage()
         {
             return s_EmptyMessageString;

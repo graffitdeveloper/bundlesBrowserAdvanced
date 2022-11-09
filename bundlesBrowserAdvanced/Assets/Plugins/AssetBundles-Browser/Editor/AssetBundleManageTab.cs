@@ -2,6 +2,11 @@
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
+using AssetBundleBrowser.AssetBundleDataSource;
+using AssetBundleBrowser.AssetBundleModel;
 
 
 namespace AssetBundleBrowser
@@ -39,7 +44,9 @@ namespace AssetBundleBrowser
 
         SearchField m_searchField;
 
-        EditorWindow m_Parent = null;
+        EditorWindow                                     m_Parent = null;
+        private IEnumerable<BundleInfo>                  _selectedBundles;
+        private AssetBundleAdvancedBuildTab              m_advancedBuildTab;
 
         internal AssetBundleManageTab()
         {
@@ -69,9 +76,8 @@ namespace AssetBundleBrowser
                 k_SplitterWidth);
 
             m_searchField = new SearchField();
+            m_advancedBuildTab = (parent as AssetBundleBrowserMain)._mAdvancedBuildTab;
         }
-
-
 
         internal void Update()
         {
@@ -104,16 +110,14 @@ namespace AssetBundleBrowser
             m_Parent.Repaint();
         }
 
-        internal void OnGUI(Rect pos)
-        {
+        internal void OnGUI(Rect pos) {
             m_Position = pos;
 
-            if(m_BundleTree == null)
-            {
+            if (m_BundleTree == null) {
                 if (m_AssetListState == null)
                     m_AssetListState = new TreeViewState();
 
-                var headerState = AssetListTree.CreateDefaultMultiColumnHeaderState();// multiColumnTreeViewRect.width);
+                var headerState = AssetListTree.CreateDefaultMultiColumnHeaderState(); // multiColumnTreeViewRect.width);
                 if (MultiColumnHeaderState.CanOverwriteSerializedFields(m_AssetListMCHState, headerState))
                     MultiColumnHeaderState.OverwriteSerializedFields(m_AssetListMCHState, headerState);
                 m_AssetListMCHState = headerState;
@@ -134,45 +138,55 @@ namespace AssetBundleBrowser
                 m_BundleTree.Refresh();
                 m_Parent.Repaint();
             }
-            
+
             HandleHorizontalResize();
             HandleVerticalResize();
 
 
-            if (AssetBundleModel.Model.BundleListIsEmpty())
-            {
+            if (AssetBundleModel.Model.BundleListIsEmpty()) {
                 m_BundleTree.OnGUI(m_Position);
                 var style = new GUIStyle(GUI.skin.label);
                 style.alignment = TextAnchor.MiddleCenter;
                 style.wordWrap = true;
                 GUI.Label(
-                    new Rect(m_Position.x + 1f, m_Position.y + 1f, m_Position.width - 2f, m_Position.height - 2f), 
+                    new Rect(m_Position.x + 1f, m_Position.y + 1f, m_Position.width - 2f, m_Position.height - 2f),
                     new GUIContent(AssetBundleModel.Model.GetEmptyMessage()),
                     style);
-            }
-            else
-            {
+            } else {
                 //Left half
                 var bundleTreeRect = new Rect(
                     m_Position.x,
                     m_Position.y,
                     m_HorizontalSplitterRect.x,
                     m_VerticalSplitterRectLeft.y - m_Position.y);
-                
+
                 m_BundleTree.OnGUI(bundleTreeRect);
                 m_DetailsList.OnGUI(new Rect(
                     bundleTreeRect.x,
                     bundleTreeRect.y + bundleTreeRect.height + k_SplitterWidth,
                     bundleTreeRect.width,
-                    m_Position.height - bundleTreeRect.height - k_SplitterWidth*2));
-                
+                    m_Position.height - bundleTreeRect.height - k_SplitterWidth * 2));
+
                 //Right half.
                 float panelLeft = m_HorizontalSplitterRect.x + k_SplitterWidth;
                 float panelWidth = m_VerticalSplitterRectRight.width - k_SplitterWidth * 2;
                 float searchHeight = 20f;
                 float panelTop = m_Position.y + searchHeight;
                 float panelHeight = m_VerticalSplitterRectRight.y - panelTop;
-                OnGUISearchBar(new Rect(panelLeft, m_Position.y, panelWidth, searchHeight));
+
+
+                var names = new List<string>();
+                foreach (var bundleInfo in _selectedBundles) {
+                    names.Add(bundleInfo.displayName);
+                }
+
+                if (names.Count > 0) {
+                    OnGUISearchBar(new Rect(panelLeft, m_Position.y, panelWidth * 0.6f, searchHeight));
+                    OnGUIRebuildThisBundle(new Rect(panelLeft + panelWidth * 0.6f + 5, m_Position.y, panelWidth * 0.4f - 5, searchHeight
+                    ), names);
+                } else {
+                    OnGUISearchBar(new Rect(panelLeft, m_Position.y, panelWidth, searchHeight));
+                }
                 m_AssetList.OnGUI(new Rect(
                     panelLeft,
                     panelTop,
@@ -189,8 +203,38 @@ namespace AssetBundleBrowser
             }
         }
 
-        void OnGUISearchBar(Rect rect)
-        {
+        private void OnGUIRebuildThisBundle(Rect rect, List<string> names) {
+            if (GUI.Button(rect, names.Count > 1 ? "Build selected bundles" : "Build selected bundle")) {
+                BuildAssetBundlesByName(names.ToArray());
+            }
+        }
+
+        private void BuildAssetBundlesByName(string[] assetBundleNames) {
+	        // Argument validation
+	        if (assetBundleNames == null || assetBundleNames.Length == 0) {
+		        return;
+	        }
+
+	        // Remove duplicates from the input set of asset bundle names to build.
+	        //assetBundleNames = assetBundleNames.Distinct().ToArray();
+
+	        var builds = new List<AssetBundleBuild>();
+
+	        foreach (var assetBundle in assetBundleNames) {
+		        var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundle);
+
+		        var build = new AssetBundleBuild {
+			        assetBundleName = assetBundle,
+			        assetNames = assetPaths
+		        };
+
+		        builds.Add(build);
+	        }
+
+            m_advancedBuildTab.ExecuteBuildAllPlatforms(builds);
+        }
+
+        void OnGUISearchBar(Rect rect) {
             m_BundleTree.searchString = m_searchField.OnGUI(rect, m_BundleTree.searchString);
             m_AssetList.searchString = m_BundleTree.searchString;
         }
@@ -256,8 +300,8 @@ namespace AssetBundleBrowser
             }
         }
 
-        internal void UpdateSelectedBundles(IEnumerable<AssetBundleModel.BundleInfo> bundles)
-        {
+        internal void UpdateSelectedBundles(IEnumerable<AssetBundleModel.BundleInfo> bundles) {
+            _selectedBundles = bundles;
             AssetBundleModel.Model.AddBundlesToUpdate(bundles);
             m_AssetList.SetSelectedBundles(bundles);
             m_DetailsList.SetItems(bundles);

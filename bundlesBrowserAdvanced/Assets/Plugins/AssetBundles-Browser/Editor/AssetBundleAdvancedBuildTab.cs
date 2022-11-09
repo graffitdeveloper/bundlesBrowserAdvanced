@@ -313,7 +313,7 @@ namespace AssetBundleBrowser {
 					EditorGUI.EndDisabledGroup();
 				} else {
 					if (GUILayout.Button($"Build {sb} bundles")) {
-						EditorApplication.delayCall += ExecuteBuildAllPlatforms;
+						EditorApplication.delayCall += () => ExecuteBuildAllPlatforms();
 					}
 				}
 
@@ -397,7 +397,7 @@ namespace AssetBundleBrowser {
 			EditorGUILayout.EndScrollView();
 		}
 
-		private void ExecuteBuildAllPlatforms() {
+		public void ExecuteBuildAllPlatforms(List<AssetBundleBuild> assetBundleBuilds = null) {
 			var oldOutputPath = m_UserData.m_OutputPath;
 			var oldBuildTarget = m_UserData.m_BuildTarget;
 			var targets = new List<KeyValuePair<string, ValidBuildTarget>>();
@@ -483,7 +483,7 @@ namespace AssetBundleBrowser {
 					m_UserData.m_OutputPath = oldOutputPath + $"/{target.Key}/";
 				}
 
-				ExecuteBuild();
+				ExecuteBuild(assetBundleBuilds);
 
 				switch (target.Value) {
 					case ValidBuildTarget.WebGL:
@@ -512,7 +512,7 @@ namespace AssetBundleBrowser {
 			Debug.Log("<color=#00FFAA>Rebuild bundles for all selected platforms finished!</color>");
 		}
 
-		private void ExecuteBuild() {
+		private void ExecuteBuild(List<AssetBundleBuild> assetBundleBuilds) {
 			if (AssetBundleModel.Model.DataSource.CanSpecifyBuildOutputDirectory) {
 				if (string.IsNullOrEmpty(m_UserData.m_OutputPath))
 					BrowseForFolder();
@@ -572,7 +572,7 @@ namespace AssetBundleBrowser {
 				m_InspectTab.RefreshBundles();
 			};
 
-			AssetBundleModel.Model.DataSource.BuildAssetBundles(buildInfo);
+			AssetBundleModel.Model.DataSource.BuildAssetBundles(buildInfo, assetBundleBuilds);
 
 			AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 

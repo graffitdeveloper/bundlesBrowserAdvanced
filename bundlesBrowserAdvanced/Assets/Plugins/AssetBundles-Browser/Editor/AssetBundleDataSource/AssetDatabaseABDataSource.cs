@@ -77,24 +77,22 @@ namespace AssetBundleBrowser.AssetBundleDataSource
             get { return true; } 
         }
 
-        public bool BuildAssetBundles (ABBuildInfo info) {
-            if(info == null)
-            {
+        public bool BuildAssetBundles(ABBuildInfo info, List<AssetBundleBuild> assetBundleBuilds = null) {
+            if (info == null) {
                 Debug.Log("Error in build");
                 return false;
             }
 
-            var buildManifest = BuildPipeline.BuildAssetBundles(info.outputDirectory, info.options, info.buildTarget);
-            if (buildManifest == null)
-            {
+            var buildManifest = assetBundleBuilds == null
+                ? BuildPipeline.BuildAssetBundles(info.outputDirectory, info.options, info.buildTarget)
+                : BuildPipeline.BuildAssetBundles(info.outputDirectory, assetBundleBuilds.ToArray(), info.options, info.buildTarget);
+            if (buildManifest == null) {
                 Debug.Log("Error in build");
                 return false;
             }
 
-            foreach(var assetBundleName in buildManifest.GetAllAssetBundles())
-            {
-                if (info.onBuild != null)
-                {
+            foreach (var assetBundleName in buildManifest.GetAllAssetBundles()) {
+                if (info.onBuild != null) {
                     info.onBuild(assetBundleName);
                 }
             }
