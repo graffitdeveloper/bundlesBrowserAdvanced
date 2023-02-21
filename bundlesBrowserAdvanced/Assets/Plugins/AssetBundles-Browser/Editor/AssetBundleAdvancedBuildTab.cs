@@ -48,8 +48,8 @@ namespace AssetBundleBrowser {
 		ToggleData                                       m_ForceRebuild;
 		ToggleData                                       m_AskConfirmation;
 		ToggleData                                       m_CopyToStreaming;
-		private Dictionary<ValidBuildTarget, ToggleData> m_EnabledPlatformsToggleDatas;
-		private Dictionary<ValidBuildTarget, ToggleData> m_RebuildPlatformsToggleDatas;
+		private Dictionary<ValidBuildTarget, ToggleData> m_EnabledBuildTargetsToggleDatas;
+		private Dictionary<ValidBuildTarget, ToggleData> m_RebuildBuildTargetsToggleDatas;
 		GUIContent                                       m_TargetContent;
 		GUIContent                                       m_CompressionContent;
 
@@ -66,7 +66,7 @@ namespace AssetBundleBrowser {
 		};
 
 		int[]        m_CompressionValues = { 0, 1, 2 };
-		private bool m_EnabledPlatforms;
+		private bool m_EnabledBuildTargets;
 
 
 		internal AssetBundleAdvancedBuildTab() {
@@ -162,28 +162,28 @@ namespace AssetBundleBrowser {
 				"After build completes, will copy all build content to " + m_streamingPath + " for use in stand-alone player.",
 				m_UserData.m_OnToggles);
 
-			m_EnabledPlatformsToggleDatas = new Dictionary<ValidBuildTarget, ToggleData>();
+			m_EnabledBuildTargetsToggleDatas = new Dictionary<ValidBuildTarget, ToggleData>();
 			var values = Enum.GetValues(typeof(ValidBuildTarget));
 
 			foreach (ValidBuildTarget value in values) {
-				m_EnabledPlatformsToggleDatas.Add(value, new ToggleData(
+				m_EnabledBuildTargetsToggleDatas.Add(value, new ToggleData(
 					false,
 					value.ToString(),
 					$"Toggle {value} support",
 					m_UserData.m_OnToggles));
 			}
 
-			m_RebuildPlatformsToggleDatas = new Dictionary<ValidBuildTarget, ToggleData>();
+			m_RebuildBuildTargetsToggleDatas = new Dictionary<ValidBuildTarget, ToggleData>();
 
 			foreach (ValidBuildTarget value in values) {
-				m_RebuildPlatformsToggleDatas.Add(value, new ToggleData(
+				m_RebuildBuildTargetsToggleDatas.Add(value, new ToggleData(
 					false,
 					$"Rebuild {value.ToString()}",
 					$"Rebuild {value} bundles",
 					m_UserData.m_OnToggles));
 			}
 
-			m_TargetContent = new GUIContent("Build Target", "Choose target platform to build for.");
+			m_TargetContent = new GUIContent("Build Target", "Choose build target to build for.");
 			m_CompressionContent = new GUIContent("Compression", "Choose no compress, standard (LZMA), or chunk based (LZ4)");
 
 			if (m_UserData.m_UseDefaultPath) {
@@ -227,82 +227,81 @@ namespace AssetBundleBrowser {
 				var style = new GUIStyle();
 				style.alignment = TextAnchor.MiddleLeft;
 				EditorGUILayout.BeginHorizontal(style, options);
-
-				EditorGUILayout.Space();
-
-				var atLeastOnePlatformEnabled = false;
+				var atLeastOneBuildTargetEnabled = false;
 				var values = Enum.GetValues(typeof(ValidBuildTarget));
 				foreach (ValidBuildTarget value in values) {
-					if (m_EnabledPlatformsToggleDatas[value].state) {
-						atLeastOnePlatformEnabled = true;
+					if (m_EnabledBuildTargetsToggleDatas[value].state) {
+						atLeastOneBuildTargetEnabled = true;
 						newState = GUILayout.Toggle(
-							m_RebuildPlatformsToggleDatas[value].state,
-							m_RebuildPlatformsToggleDatas[value].content);
-						if (newState != m_RebuildPlatformsToggleDatas[value].state) {
+							m_RebuildBuildTargetsToggleDatas[value].state,
+							m_RebuildBuildTargetsToggleDatas[value].content);
+						if (newState != m_RebuildBuildTargetsToggleDatas[value].state) {
 							if (newState) {
-								m_UserData.m_OnToggles.Add(m_RebuildPlatformsToggleDatas[value].content.text);
+								m_UserData.m_OnToggles.Add(m_RebuildBuildTargetsToggleDatas[value].content.text);
 							} else {
-								m_UserData.m_OnToggles.Remove(m_RebuildPlatformsToggleDatas[value].content.text);
+								m_UserData.m_OnToggles.Remove(m_RebuildBuildTargetsToggleDatas[value].content.text);
 							}
 
-							m_RebuildPlatformsToggleDatas[value].state = newState;
+							m_RebuildBuildTargetsToggleDatas[value].state = newState;
 						}
 
 						EditorGUILayout.Space();
 					} else {
-						m_RebuildPlatformsToggleDatas[value].state = false;
-						m_UserData.m_OnToggles.Remove(m_RebuildPlatformsToggleDatas[value].content.text);
+						m_RebuildBuildTargetsToggleDatas[value].state = false;
+						m_UserData.m_OnToggles.Remove(m_RebuildBuildTargetsToggleDatas[value].content.text);
 					}
 				}
 
-				if (!atLeastOnePlatformEnabled) {
+				if (!atLeastOneBuildTargetEnabled) {
 					GUILayout.Label(EditorGUIUtility.FindTexture("console.infoicon.inactive.sml"), GUILayout.MaxWidth(20f));
-					GUILayout.Label("All platforms are disabled");
+					GUILayout.Label("All build targets are disabled");
 				}
 
+				GUILayout.FlexibleSpace();
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.Space();
 
-				var platforms = new List<string>();
-
-				foreach (var data in m_RebuildPlatformsToggleDatas) {
-					if (data.Value.state) {
-						platforms.Add(data.Key.ToString());
-					}
-				}
-
-				m_EnabledPlatforms = EditorGUILayout.Foldout(m_EnabledPlatforms, "Enabled platforms");
-				if (m_EnabledPlatforms) {
+				m_EnabledBuildTargets = EditorGUILayout.Foldout(m_EnabledBuildTargets, "Enabled build targets");
+				if (m_EnabledBuildTargets) {
 					foreach (ValidBuildTarget value in values) {
 						newState = GUILayout.Toggle(
-							m_EnabledPlatformsToggleDatas[value].state,
-							m_EnabledPlatformsToggleDatas[value].content);
-						if (newState != m_EnabledPlatformsToggleDatas[value].state) {
+							m_EnabledBuildTargetsToggleDatas[value].state,
+							m_EnabledBuildTargetsToggleDatas[value].content);
+						if (newState != m_EnabledBuildTargetsToggleDatas[value].state) {
 							if (newState)
-								m_UserData.m_OnToggles.Add(m_EnabledPlatformsToggleDatas[value].content.text);
+								m_UserData.m_OnToggles.Add(m_EnabledBuildTargetsToggleDatas[value].content.text);
 							else
-								m_UserData.m_OnToggles.Remove(m_EnabledPlatformsToggleDatas[value].content.text);
-							m_EnabledPlatformsToggleDatas[value].state = newState;
+								m_UserData.m_OnToggles.Remove(m_EnabledBuildTargetsToggleDatas[value].content.text);
+							m_EnabledBuildTargetsToggleDatas[value].state = newState;
 						}
 					}
 				}
 
+				EditorGUILayout.Space();
+
+				var buildTargets = new List<string>();
+
+				foreach (var data in m_RebuildBuildTargetsToggleDatas) {
+					if (data.Value.state) {
+						buildTargets.Add(data.Key.ToString());
+					}
+				}
+
 				var sb = new StringBuilder();
-				for (var i = 0; i < platforms.Count; i++) {
-					sb.Append(platforms[i]);
-					if (i < platforms.Count - 1) {
+				for (var i = 0; i < buildTargets.Count; i++) {
+					sb.Append(buildTargets[i]);
+					if (i < buildTargets.Count - 1) {
 						sb.Append(", ");
 					}
 				}
-				EditorGUILayout.Space();
 
-				if (platforms.Count == 0) {
+				if (buildTargets.Count == 0) {
 					EditorGUI.BeginDisabledGroup(true);
-					GUILayout.Button("Choose at least one platform to rebuild");
+					GUILayout.Button("Choose at least one build target to rebuild");
 					EditorGUI.EndDisabledGroup();
 				} else {
 					if (GUILayout.Button($"Build {sb} bundles")) {
-						EditorApplication.delayCall += () => ExecuteBuildAllPlatforms();
+						EditorApplication.delayCall += () => ExecuteBuildAllBuildTargets();
 					}
 				}
 
@@ -389,19 +388,19 @@ namespace AssetBundleBrowser {
 			EditorGUILayout.EndScrollView();
 		}
 
-		public void ExecuteBuildAllPlatforms(List<AssetBundleBuild> assetBundleBuilds = null) {
+		public void ExecuteBuildAllBuildTargets(List<AssetBundleBuild> assetBundleBuilds = null) {
 			var oldOutputPath = m_UserData.m_OutputPath;
 			var oldBuildTarget = m_UserData.m_BuildTarget;
 			var targets = new List<ValidBuildTarget>();
 
 			// для экономии времени текущую включенную платформу добавляем в список первой, если её нужно ребилдить
 			var currentEditorValidTarget = BuildTargetToValidBuildTarget(EditorUserBuildSettings.activeBuildTarget);
-			if (m_RebuildPlatformsToggleDatas[currentEditorValidTarget].state) {
+			if (m_RebuildBuildTargetsToggleDatas[currentEditorValidTarget].state) {
 				targets.Add(currentEditorValidTarget);
 			}
 
 			// добавляем остальные отмеченные платформы
-			foreach (var data in m_RebuildPlatformsToggleDatas) {
+			foreach (var data in m_RebuildBuildTargetsToggleDatas) {
 				if (data.Value.state && !targets.Exists(target => target == data.Key)) {
 					targets.Add(data.Key);
 				}
@@ -415,7 +414,7 @@ namespace AssetBundleBrowser {
 				}
 			}
 
-			Debug.Log($"<color=#00FFAA>Started bundles rebuild for platforms: {sb}...</color>");
+			Debug.Log($"<color=#00FFAA>Started bundles rebuild for build targets: {sb}...</color>");
 
 			// билдим все платформы, которые нужно
 			for (var i = 0; i < targets.Count; i++) {
@@ -445,7 +444,7 @@ namespace AssetBundleBrowser {
 			m_UserData.m_OutputPath = oldOutputPath;
 			m_UserData.m_BuildTarget = oldBuildTarget;
 			AssetDatabase.SaveAssets();
-			Debug.Log("<color=#00FFAA>Rebuild bundles for all selected platforms finished!</color>");
+			Debug.Log("<color=#00FFAA>Rebuild bundles for all selected build targets finished!</color>");
 		}
 
 		private void ExecuteBuild(List<AssetBundleBuild> assetBundleBuilds) {

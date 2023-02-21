@@ -231,7 +231,7 @@ namespace AssetBundleBrowser
 		        builds.Add(build);
 	        }
 
-            m_advancedBuildTab.ExecuteBuildAllPlatforms(builds);
+            m_advancedBuildTab.ExecuteBuildAllBuildTargets(builds);
         }
 
         void OnGUISearchBar(Rect rect) {
