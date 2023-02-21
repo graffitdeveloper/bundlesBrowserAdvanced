@@ -224,26 +224,40 @@ namespace AssetBundleBrowser {
 
 				var options = new GUILayoutOption[1];
 				options[0] = GUILayout.Width(300);
-				EditorGUILayout.BeginHorizontal(options);
+				var style = new GUIStyle();
+				style.alignment = TextAnchor.MiddleLeft;
+				EditorGUILayout.BeginHorizontal(style, options);
 
 				EditorGUILayout.Space();
 
+				var atLeastOnePlatformEnabled = false;
 				var values = Enum.GetValues(typeof(ValidBuildTarget));
 				foreach (ValidBuildTarget value in values) {
 					if (m_EnabledPlatformsToggleDatas[value].state) {
+						atLeastOnePlatformEnabled = true;
 						newState = GUILayout.Toggle(
 							m_RebuildPlatformsToggleDatas[value].state,
 							m_RebuildPlatformsToggleDatas[value].content);
 						if (newState != m_RebuildPlatformsToggleDatas[value].state) {
-							if (newState)
+							if (newState) {
 								m_UserData.m_OnToggles.Add(m_RebuildPlatformsToggleDatas[value].content.text);
-							else
+							} else {
 								m_UserData.m_OnToggles.Remove(m_RebuildPlatformsToggleDatas[value].content.text);
+							}
+
 							m_RebuildPlatformsToggleDatas[value].state = newState;
 						}
 
 						EditorGUILayout.Space();
+					} else {
+						m_RebuildPlatformsToggleDatas[value].state = false;
+						m_UserData.m_OnToggles.Remove(m_RebuildPlatformsToggleDatas[value].content.text);
 					}
+				}
+
+				if (!atLeastOnePlatformEnabled) {
+					GUILayout.Label(EditorGUIUtility.FindTexture("console.infoicon.inactive.sml"), GUILayout.MaxWidth(20f));
+					GUILayout.Label("All platforms are disabled");
 				}
 
 				EditorGUILayout.EndHorizontal();
@@ -280,10 +294,11 @@ namespace AssetBundleBrowser {
 						sb.Append(", ");
 					}
 				}
+				EditorGUILayout.Space();
 
 				if (platforms.Count == 0) {
 					EditorGUI.BeginDisabledGroup(true);
-					GUILayout.Button("Choose at least one platform");
+					GUILayout.Button("Choose at least one platform to rebuild");
 					EditorGUI.EndDisabledGroup();
 				} else {
 					if (GUILayout.Button($"Build {sb} bundles")) {
