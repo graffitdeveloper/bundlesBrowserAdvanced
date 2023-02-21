@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
@@ -43,17 +44,14 @@ namespace AssetBundleBrowser {
 
 		[SerializeField] private BuildTabData m_UserData;
 
-		List<ToggleData> m_ToggleData;
-		ToggleData       m_ForceRebuild;
-		ToggleData       m_AskConfirmation;
-		ToggleData       m_CopyToStreaming;
-		GUIContent       m_TargetContent;
-		GUIContent       m_CompressionContent;
-
-		ToggleData m_rebuildWebGL;
-		ToggleData m_rebuildAndroid;
-		ToggleData m_rebuildiOS;
-		ToggleData m_rebuildStandaloneWindows;
+		List<ToggleData>                                 m_ToggleData;
+		ToggleData                                       m_ForceRebuild;
+		ToggleData                                       m_AskConfirmation;
+		ToggleData                                       m_CopyToStreaming;
+		private Dictionary<ValidBuildTarget, ToggleData> m_EnabledPlatformsToggleDatas;
+		private Dictionary<ValidBuildTarget, ToggleData> m_RebuildPlatformsToggleDatas;
+		GUIContent                                       m_TargetContent;
+		GUIContent                                       m_CompressionContent;
 
 		internal enum CompressOptions {
 			Uncompressed = 0,
@@ -67,7 +65,8 @@ namespace AssetBundleBrowser {
 			new GUIContent("Chunk Based Compression (LZ4)")
 		};
 
-		int[] m_CompressionValues = {0, 1, 2};
+		int[]        m_CompressionValues = { 0, 1, 2 };
+		private bool m_EnabledPlatforms;
 
 
 		internal AssetBundleAdvancedBuildTab() {
@@ -163,30 +162,26 @@ namespace AssetBundleBrowser {
 				"After build completes, will copy all build content to " + m_streamingPath + " for use in stand-alone player.",
 				m_UserData.m_OnToggles);
 
+			m_EnabledPlatformsToggleDatas = new Dictionary<ValidBuildTarget, ToggleData>();
+			var values = Enum.GetValues(typeof(ValidBuildTarget));
 
-			m_rebuildWebGL = new ToggleData(
-				false,
-				"Rebuild WebGL",
-				"Rebuild WebGL bundles",
-				m_UserData.m_OnToggles);
+			foreach (ValidBuildTarget value in values) {
+				m_EnabledPlatformsToggleDatas.Add(value, new ToggleData(
+					false,
+					value.ToString(),
+					$"Toggle {value} support",
+					m_UserData.m_OnToggles));
+			}
 
-			m_rebuildAndroid = new ToggleData(
-				false,
-				"Rebuild Android",
-				"Rebuild Android bundles",
-				m_UserData.m_OnToggles);
+			m_RebuildPlatformsToggleDatas = new Dictionary<ValidBuildTarget, ToggleData>();
 
-			m_rebuildiOS = new ToggleData(
-				false,
-				"Rebuild iOS",
-				"Rebuild iOS bundles",
-				m_UserData.m_OnToggles);
-
-			m_rebuildStandaloneWindows = new ToggleData(
-				false,
-				"Rebuild StandaloneWindows",
-				"Rebuild StandaloneWindows bundles",
-				m_UserData.m_OnToggles);
+			foreach (ValidBuildTarget value in values) {
+				m_RebuildPlatformsToggleDatas.Add(value, new ToggleData(
+					false,
+					$"Rebuild {value.ToString()}",
+					$"Rebuild {value} bundles",
+					m_UserData.m_OnToggles));
+			}
 
 			m_TargetContent = new GUIContent("Build Target", "Choose target platform to build for.");
 			m_CompressionContent = new GUIContent("Compression", "Choose no compress, standard (LZMA), or chunk based (LZ4)");
@@ -215,6 +210,7 @@ namespace AssetBundleBrowser {
 					m_UserData.m_OutputPath = newPath;
 					//EditorUserBuildSettings.SetPlatformSettings(EditorUserBuildSettings.activeBuildTarget.ToString(), "AssetBundleOutputPath", m_OutputPath);
 				}
+
 				GUILayout.EndHorizontal();
 				GUILayout.BeginHorizontal();
 				GUILayout.FlexibleSpace();
@@ -232,72 +228,50 @@ namespace AssetBundleBrowser {
 
 				EditorGUILayout.Space();
 
-				newState = GUILayout.Toggle(
-					m_rebuildWebGL.state,
-					m_rebuildWebGL.content);
-				if (newState != m_rebuildWebGL.state) {
-					if (newState)
-						m_UserData.m_OnToggles.Add(m_rebuildWebGL.content.text);
-					else
-						m_UserData.m_OnToggles.Remove(m_rebuildWebGL.content.text);
-					m_rebuildWebGL.state = newState;
+				var values = Enum.GetValues(typeof(ValidBuildTarget));
+				foreach (ValidBuildTarget value in values) {
+					if (m_EnabledPlatformsToggleDatas[value].state) {
+						newState = GUILayout.Toggle(
+							m_RebuildPlatformsToggleDatas[value].state,
+							m_RebuildPlatformsToggleDatas[value].content);
+						if (newState != m_RebuildPlatformsToggleDatas[value].state) {
+							if (newState)
+								m_UserData.m_OnToggles.Add(m_RebuildPlatformsToggleDatas[value].content.text);
+							else
+								m_UserData.m_OnToggles.Remove(m_RebuildPlatformsToggleDatas[value].content.text);
+							m_RebuildPlatformsToggleDatas[value].state = newState;
+						}
+
+						EditorGUILayout.Space();
+					}
 				}
 
-				EditorGUILayout.Space();
-
-				newState = GUILayout.Toggle(
-					m_rebuildAndroid.state,
-					m_rebuildAndroid.content);
-				if (newState != m_rebuildAndroid.state) {
-					if (newState)
-						m_UserData.m_OnToggles.Add(m_rebuildAndroid.content.text);
-					else
-						m_UserData.m_OnToggles.Remove(m_rebuildAndroid.content.text);
-					m_rebuildAndroid.state = newState;
-				}
-
-				EditorGUILayout.Space();
-
-				newState = GUILayout.Toggle(
-					m_rebuildiOS.state,
-					m_rebuildiOS.content);
-				if (newState != m_rebuildiOS.state) {
-					if (newState)
-						m_UserData.m_OnToggles.Add(m_rebuildiOS.content.text);
-					else
-						m_UserData.m_OnToggles.Remove(m_rebuildiOS.content.text);
-					m_rebuildiOS.state = newState;
-				}
-
-				EditorGUILayout.Space();
-
-				newState = GUILayout.Toggle(
-					m_rebuildStandaloneWindows.state,
-					m_rebuildStandaloneWindows.content);
-				if (newState != m_rebuildStandaloneWindows.state) {
-					if (newState)
-						m_UserData.m_OnToggles.Add(m_rebuildStandaloneWindows.content.text);
-					else
-						m_UserData.m_OnToggles.Remove(m_rebuildStandaloneWindows.content.text);
-					m_rebuildStandaloneWindows.state = newState;
-				}
 				EditorGUILayout.EndHorizontal();
 				EditorGUILayout.Space();
 
 				var platforms = new List<string>();
-				if (m_rebuildWebGL.state) {
-					platforms.Add("WebGL");
-				}
-				if (m_rebuildAndroid.state) {
-					platforms.Add("Android");
-				}
-				if (m_rebuildiOS.state) {
-					platforms.Add("iOS");
-				}
-				if (m_rebuildStandaloneWindows.state) {
-					platforms.Add("StandaloneWindows");
+
+				foreach (var data in m_RebuildPlatformsToggleDatas) {
+					if (data.Value.state) {
+						platforms.Add(data.Key.ToString());
+					}
 				}
 
+				m_EnabledPlatforms = EditorGUILayout.Foldout(m_EnabledPlatforms, "Enabled platforms");
+				if (m_EnabledPlatforms) {
+					foreach (ValidBuildTarget value in values) {
+						newState = GUILayout.Toggle(
+							m_EnabledPlatformsToggleDatas[value].state,
+							m_EnabledPlatformsToggleDatas[value].content);
+						if (newState != m_EnabledPlatformsToggleDatas[value].state) {
+							if (newState)
+								m_UserData.m_OnToggles.Add(m_EnabledPlatformsToggleDatas[value].content.text);
+							else
+								m_UserData.m_OnToggles.Remove(m_EnabledPlatformsToggleDatas[value].content.text);
+							m_EnabledPlatformsToggleDatas[value].state = newState;
+						}
+					}
+				}
 
 				var sb = new StringBuilder();
 				for (var i = 0; i < platforms.Count; i++) {
@@ -348,6 +322,7 @@ namespace AssetBundleBrowser {
 					m_AskConfirmation.state = newState;
 				}
 			}
+
 			// advanced options
 			using (new EditorGUI.DisabledScope(!AssetBundleModel.Model.DataSource.CanSpecifyBuildOptions)) {
 				EditorGUILayout.Space();
@@ -376,6 +351,7 @@ namespace AssetBundleBrowser {
 					if (cmp != m_UserData.m_Compression) {
 						m_UserData.m_Compression = cmp;
 					}
+
 					foreach (var tog in m_ToggleData) {
 						newState = EditorGUILayout.ToggleLeft(
 							tog.content,
@@ -388,6 +364,7 @@ namespace AssetBundleBrowser {
 							tog.state = newState;
 						}
 					}
+
 					EditorGUILayout.Space();
 					EditorGUI.indentLevel = indent;
 				}
@@ -400,110 +377,54 @@ namespace AssetBundleBrowser {
 		public void ExecuteBuildAllPlatforms(List<AssetBundleBuild> assetBundleBuilds = null) {
 			var oldOutputPath = m_UserData.m_OutputPath;
 			var oldBuildTarget = m_UserData.m_BuildTarget;
-			var targets = new List<KeyValuePair<string, ValidBuildTarget>>();
+			var targets = new List<ValidBuildTarget>();
 
 			// для экономии времени текущую включенную платформу добавляем в список первой, если её нужно ребилдить
-#if UNITY_WEBGL
-            if (m_rebuildWebGL.state) {
-                targets.Add(new KeyValuePair<string, ValidBuildTarget>("Web", ValidBuildTarget.WebGL));
-            }
-#elif UNITY_ANDROID
-            if (m_rebuildAndroid.state) {
-                targets.Add(new KeyValuePair<string, ValidBuildTarget>("Android", ValidBuildTarget.Android));
-            }
-#elif UNITY_IOS
-			if (m_rebuildiOS.state) {
-				targets.Add(new KeyValuePair<string, ValidBuildTarget>("iOS", ValidBuildTarget.iOS));
+			var currentEditorValidTarget = BuildTargetToValidBuildTarget(EditorUserBuildSettings.activeBuildTarget);
+			if (m_RebuildPlatformsToggleDatas[currentEditorValidTarget].state) {
+				targets.Add(currentEditorValidTarget);
 			}
-#elif UNITY_STANDALONE
-			if (m_rebuildStandaloneWindows.state) {
-				targets.Add(new KeyValuePair<string, ValidBuildTarget>("StandaloneWindows", ValidBuildTarget.StandaloneWindows));
-			}
-#endif
+
 			// добавляем остальные отмеченные платформы
-			if (m_rebuildWebGL.state && !targets.Exists(target => target.Value == ValidBuildTarget.WebGL)) {
-				targets.Add(new KeyValuePair<string, ValidBuildTarget>("Web", ValidBuildTarget.WebGL));
-			}
-
-			if (m_rebuildAndroid.state && !targets.Exists(target => target.Value == ValidBuildTarget.Android)) {
-				targets.Add(new KeyValuePair<string, ValidBuildTarget>("Android", ValidBuildTarget.Android));
-			}
-
-			if (m_rebuildiOS.state && !targets.Exists(target => target.Value == ValidBuildTarget.iOS)) {
-				targets.Add(new KeyValuePair<string, ValidBuildTarget>("iOS", ValidBuildTarget.iOS));
-			}
-
-			if (m_rebuildStandaloneWindows.state && !targets.Exists(target => target.Value == ValidBuildTarget.StandaloneWindows)) {
-				targets.Add(new KeyValuePair<string, ValidBuildTarget>("StandaloneWindows", ValidBuildTarget.StandaloneWindows));
+			foreach (var data in m_RebuildPlatformsToggleDatas) {
+				if (data.Value.state && !targets.Exists(target => target == data.Key)) {
+					targets.Add(data.Key);
+				}
 			}
 
 			var sb = new StringBuilder();
 			for (var i = 0; i < targets.Count; i++) {
-				sb.Append(targets[i].Value);
+				sb.Append(targets[i].ToString());
 				if (i < targets.Count - 1) {
 					sb.Append(", ");
 				}
 			}
+
 			Debug.Log($"<color=#00FFAA>Started bundles rebuild for platforms: {sb}...</color>");
 
 			// билдим все платформы, которые нужно
 			for (var i = 0; i < targets.Count; i++) {
 				var target = targets[i];
 
-				var symbols = string.Empty;
-				switch (target.Value) {
-					case ValidBuildTarget.WebGL:
-						symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.WebGL);
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.WebGL, "BUNDLES_BUILD");
-						break;
+				var targetGroup = ValidBuildTargetToGroup(target);
+				var sdSymbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup);
+				PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, "BUNDLES_BUILD");
 
-					case ValidBuildTarget.Android:
-						symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android);
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android, "BUNDLES_BUILD");
-						break;
+				Debug.Log($"<color=#00FFAA>Building {target} bundles...</color>");
 
-					case ValidBuildTarget.iOS:
-						symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.iOS);
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.iOS, "BUNDLES_BUILD");
-						break;
-
-					case ValidBuildTarget.StandaloneWindows:
-						symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone);
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, "BUNDLES_BUILD");
-						break;
-				}
-
-				Debug.Log($"<color=#00FFAA>Building {target.Value} bundles...</color>");
-
-				m_UserData.m_BuildTarget = target.Value;
+				m_UserData.m_BuildTarget = target;
 
 				if (oldOutputPath[oldOutputPath.Length - 1] == '/') {
-					m_UserData.m_OutputPath = oldOutputPath + $"{target.Key}/";
+					m_UserData.m_OutputPath = oldOutputPath + $"{target}/";
 				} else {
-					m_UserData.m_OutputPath = oldOutputPath + $"/{target.Key}/";
+					m_UserData.m_OutputPath = oldOutputPath + $"/{target}/";
 				}
 
 				ExecuteBuild(assetBundleBuilds);
 
-				switch (target.Value) {
-					case ValidBuildTarget.WebGL:
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.WebGL, symbols);
-						break;
+				PlayerSettings.SetScriptingDefineSymbolsForGroup(targetGroup, sdSymbols);
 
-					case ValidBuildTarget.Android:
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android, symbols);
-						break;
-
-					case ValidBuildTarget.iOS:
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.iOS, symbols);
-						break;
-
-					case ValidBuildTarget.StandaloneWindows:
-						PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, symbols);
-						break;
-				}
-
-				Debug.Log($"<color=#00FFAA>Finished build {target.Value} bundles</color>");
+				Debug.Log($"<color=#00FFAA>Finished build {target} bundles</color>");
 			}
 
 			m_UserData.m_OutputPath = oldOutputPath;
@@ -537,7 +458,8 @@ namespace AssetBundleBrowser {
 							if (m_CopyToStreaming.state)
 								if (Directory.Exists(m_streamingPath))
 									Directory.Delete(m_streamingPath, true);
-						} catch (System.Exception e) {
+						}
+						catch (System.Exception e) {
 							Debug.LogException(e);
 						}
 					}
@@ -615,6 +537,170 @@ namespace AssetBundleBrowser {
 		private void ResetPathToDefault() {
 			m_UserData.m_UseDefaultPath = true;
 			m_UserData.m_OutputPath = "../AssetBundles";
+		}
+
+		internal BuildTargetGroup ValidBuildTargetToGroup(ValidBuildTarget target) {
+			BuildTargetGroup result;
+			switch (target) {
+				case ValidBuildTarget.StandaloneOSXUniversal:
+				case ValidBuildTarget.StandaloneOSXIntel:
+				case ValidBuildTarget.StandaloneWindows:
+				case ValidBuildTarget.StandaloneLinux:
+				case ValidBuildTarget.StandaloneWindows64:
+				case ValidBuildTarget.StandaloneLinux64:
+				case ValidBuildTarget.StandaloneLinuxUniversal:
+				case ValidBuildTarget.StandaloneOSXIntel64:
+					result = BuildTargetGroup.Standalone;
+					break;
+				case ValidBuildTarget.WebPlayer:
+				case ValidBuildTarget.WebPlayerStreamed:
+				case ValidBuildTarget.WebGL:
+					result = BuildTargetGroup.WebGL;
+					break;
+				case ValidBuildTarget.iOS:
+					result = BuildTargetGroup.iOS;
+					break;
+				case ValidBuildTarget.PS3:
+					result = BuildTargetGroup.PS3;
+					break;
+				case ValidBuildTarget.XBOX360:
+					result = BuildTargetGroup.XBOX360;
+					break;
+				case ValidBuildTarget.Android:
+					result = BuildTargetGroup.Android;
+					break;
+				case ValidBuildTarget.BlackBerry:
+					result = BuildTargetGroup.BlackBerry;
+					break;
+				case ValidBuildTarget.WSAPlayer:
+					result = BuildTargetGroup.WSA;
+					break;
+				case ValidBuildTarget.WP8Player:
+					result = BuildTargetGroup.WP8;
+					break;
+				case ValidBuildTarget.Tizen:
+					result = BuildTargetGroup.Tizen;
+					break;
+				case ValidBuildTarget.PSP2:
+					result = BuildTargetGroup.PSP2;
+					break;
+				case ValidBuildTarget.PS4:
+					result = BuildTargetGroup.PS4;
+					break;
+				case ValidBuildTarget.PSM:
+					result = BuildTargetGroup.PSM;
+					break;
+				case ValidBuildTarget.XboxOne:
+					result = BuildTargetGroup.XboxOne;
+					break;
+				case ValidBuildTarget.SamsungTV:
+					result = BuildTargetGroup.SamsungTV;
+					break;
+				case ValidBuildTarget.N3DS:
+					result = BuildTargetGroup.N3DS;
+					break;
+				case ValidBuildTarget.WiiU:
+					result = BuildTargetGroup.WiiU;
+					break;
+				case ValidBuildTarget.tvOS:
+					result = BuildTargetGroup.tvOS;
+					break;
+				case ValidBuildTarget.Switch:
+					result = BuildTargetGroup.Switch;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(target), target, null);
+			}
+
+			return result;
+		}
+
+		internal ValidBuildTarget BuildTargetToValidBuildTarget(BuildTarget target) {
+			ValidBuildTarget result;
+			switch (target) {
+				case BuildTarget.StandaloneOSX:
+					result = ValidBuildTarget.StandaloneOSXUniversal;
+					break;
+				case BuildTarget.StandaloneOSXIntel:
+					result = ValidBuildTarget.StandaloneOSXIntel;
+					break;
+				case BuildTarget.StandaloneWindows:
+					result = ValidBuildTarget.StandaloneWindows;
+					break;
+				case BuildTarget.iOS:
+					result = ValidBuildTarget.iOS;
+					break;
+				case BuildTarget.PS3:
+					result = ValidBuildTarget.PS3;
+					break;
+				case BuildTarget.XBOX360:
+					result = ValidBuildTarget.XBOX360;
+					break;
+				case BuildTarget.Android:
+					result = ValidBuildTarget.Android;
+					break;
+				case BuildTarget.StandaloneLinux:
+					result = ValidBuildTarget.StandaloneLinux;
+					break;
+				case BuildTarget.StandaloneWindows64:
+					result = ValidBuildTarget.StandaloneWindows64;
+					break;
+				case BuildTarget.WebGL:
+					result = ValidBuildTarget.WebGL;
+					break;
+				case BuildTarget.WSAPlayer:
+					result = ValidBuildTarget.WSAPlayer;
+					break;
+				case BuildTarget.StandaloneLinux64:
+					result = ValidBuildTarget.StandaloneLinux64;
+					break;
+				case BuildTarget.StandaloneLinuxUniversal:
+					result = ValidBuildTarget.StandaloneLinuxUniversal;
+					break;
+				case BuildTarget.WP8Player:
+					result = ValidBuildTarget.WP8Player;
+					break;
+				case BuildTarget.StandaloneOSXIntel64:
+					result = ValidBuildTarget.StandaloneOSXIntel64;
+					break;
+				case BuildTarget.BlackBerry:
+					result = ValidBuildTarget.BlackBerry;
+					break;
+				case BuildTarget.Tizen:
+					result = ValidBuildTarget.Tizen;
+					break;
+				case BuildTarget.PSP2:
+					result = ValidBuildTarget.PSP2;
+					break;
+				case BuildTarget.PS4:
+					result = ValidBuildTarget.PS4;
+					break;
+				case BuildTarget.PSM:
+					result = ValidBuildTarget.PSM;
+					break;
+				case BuildTarget.XboxOne:
+					result = ValidBuildTarget.XboxOne;
+					break;
+				case BuildTarget.SamsungTV:
+					result = ValidBuildTarget.SamsungTV;
+					break;
+				case BuildTarget.N3DS:
+					result = ValidBuildTarget.N3DS;
+					break;
+				case BuildTarget.WiiU:
+					result = ValidBuildTarget.WiiU;
+					break;
+				case BuildTarget.tvOS:
+					result = ValidBuildTarget.tvOS;
+					break;
+				case BuildTarget.Switch:
+					result = ValidBuildTarget.Switch;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(target), target, null);
+			}
+
+			return result;
 		}
 
 		//Note: this is the provided BuildTarget enum with some entries removed as they are invalid in the dropdown
